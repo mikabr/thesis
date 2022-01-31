@@ -1,0 +1,34 @@
+---
+thesistitle: "Language learning at scale: Data-driven and model-motivated analyses of lexical and morphological development"
+thesisauthor: Mika Braginsky
+prevdegrees: B.S., Massachusetts Institute of Technology (2014)
+department: Department of Brain and Cognitive Sciences
+degree: Doctor of Philosophy in Brain and Cognitive Sciences
+degreemonth: February
+degreeyear: 2022
+copyrightauthor: true
+thesisdate: January 31st, 2022
+supervisor: Edward Gibson
+supervisortitle: Professor, Brain and Cognitive Sciences
+chair: Mark Harnett
+chairtitle: Graduate Officer, Department of Brain and Cognitive Sciences
+abstract: abstract.txt
+acknowledgements: acknowledgements.txt
+
+site: bookdown::bookdown_site
+documentclass: book
+geometry: margin=2.5cm
+linestretch: 1.5
+fontsize: 11pt
+mainfont: SourceSerifPro-Regular
+sansfont: SourceSansPro-Regular
+monofont: SourceCodePro-Regular
+lot: false
+lof: false
+
+bibliography: thesis.bib
+biblio-title: References
+biblio-style: apalike
+biblio-stretch: 1
+link-citations: yes
+---

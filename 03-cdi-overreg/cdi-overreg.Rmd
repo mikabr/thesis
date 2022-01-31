@@ -1,0 +1,193 @@
+---
+output: html_document
+---
+
+```{r}
+overreg_by_kid <- feather::read_feather("data/wordbank-book/overreg_by_kid.feather")
+overreg_longs <- overreg_by_kid %>%
+  left_join(admins %>% select(data_id, source_name)) %>%
+  group_by(language, lexical_category, source_name, original_id) %>%
+  mutate(num_admins = n()) %>%
+  filter(num_admins > 1)
+
+nor_min <- 4
+nor_longs <- overreg_longs %>%
+  ungroup() %>%
+  filter(language == "Norwegian") %>%
+  group_by(original_id, lexical_category) %>%
+  filter(!all(prop == 0)) %>%
+  group_by(lexical_category, original_id) %>%
+  mutate(num_ages = n_distinct(age)) %>%
+  ungroup() %>%
+  filter(num_ages >= nor_min)
+
+nor_models <- nor_longs |>
+  select(original_id, data_id, lexical_category, age, production_prop,
+         num_true, num_false, prop, total) |>
+  nest(data = c(-lexical_category, -original_id)) |>
+  mutate(
+    null_age = map(data, function(df) {
+      glm(prop ~ 1, weights = total, family = "binomial", data = df)
+    }),
+    linear_age = map(data, function(df) {
+      glm(prop ~ age, weights = total, family = "binomial", data = df)
+    }),
+    quadratic_age = map(data, function(df) {
+      glm(prop ~ age + I(age^2), weights = total, family = "binomial", data = df)
+    }),
+    null_vocab = map(data, function(df) {
+      glm(prop ~ 1, weights = total, family = "binomial", data = df)
+    }),
+    linear_vocab = map(data, function(df) {
+      glm(prop ~ production_prop, weights = total, family = "binomial", data = df)
+    }),
+    quadratic_vocab = map(data, function(df) {
+      glm(prop ~ production_prop + I(production_prop^2), weights = total, family = "binomial", data = df)
+    })
+  )
+
+nor_models <- nor_models |>
+  ungroup() |>
+  select(-data) |>
+  gather(model_type, model, -original_id, -lexical_category) |>
+  separate(model_type, c("structure", "predictor"), remove = FALSE)
+
+nor_aic <- nor_models |>
+  mutate(aic = map_dbl(model, AIC),
+         df = map_dbl(model, \(m) m$df.null)) |>
+  select(-model) |>
+  filter(structure != "null")
+
+nor_model_comp <- nor_aic |>
+ filter(structure != "null") |>
+ group_by(original_id, lexical_category, predictor) |>
+ filter(aic == min(aic)) |>
+ ungroup()
+
+nor_coefs <- nor_models |>
+  filter(structure != "null") |>
+  mutate(coefs = map(model, broom::tidy)) |>
+  select(-model) |>
+  unnest(cols = coefs)
+
+nor_groups <- nor_coefs |>
+  filter(term != "(Intercept)") |>
+  right_join(nor_model_comp) |>
+  filter(df + 1 >= 4) |>
+  mutate(positive = if_else(estimate > 0, "positive", "negative"),
+         effect = if_else(str_detect(term, "2"), "quadratic", "linear")) |>
+  select(original_id, lexical_category, structure, predictor, effect, positive) |>
+  pivot_wider(names_from = effect, values_from = positive, names_prefix = "direction_") |>
+  mutate(trajectory = case_when(
+    structure == "linear" & direction_linear == "positive" ~ "increase /",
+    structure == "linear" & direction_linear == "negative" ~ "decrease \\",
+    structure == "quadratic" & direction_quadratic == "positive" ~ "retreat \\/",
+    structure == "quadratic" & direction_quadratic == "negative" ~ "recovery /\\",
+    TRUE ~ "ALERT"
+  )) |>
+  mutate(trajectory = fct_infreq(trajectory))
+
+nor_groups |> filter(trajectory == "ALERT")
+nor_groups |> count(lexical_category, predictor, trajectory)
+feather::write_feather(nor_groups, "data/wordbank-book/nor_groups.feather")
+
+nor_group_counts <- nor_groups |>
+  count(lexical_category, predictor, trajectory) |>
+  group_by(lexical_category, predictor) |>
+  mutate(p = n / sum(n),
+         pct = sprintf("%.0f%%", p * 100),
+         label = sprintf("N = %s (%.0f%%)", n, p * 100))
+feather::write_feather(nor_group_counts, "data/wordbank-book/nor_group_counts.feather")
+```
+
+```{r}
+predictor_vals <- tibble(
+ predictor = c("age", "vocab"),
+ values = list(tibble(age = min(nor_longs$age):max(nor_longs$age)),
+               tibble(production_prop = seq(0, 1, 0.01)))
+)
+
+nor_fits <- nor_model_comp |>
+ left_join(nor_models) |>
+ left_join(predictor_vals) |>
+  mutate(fits = map2(model, values, function(m, v) {
+    v |> mutate(.fitted = predict(m, newdata = v, type = "response"))
+  }))
+
+nor_fit_vals <- nor_fits |>
+  select(-model, -values) |>
+  unnest(cols = fits)
+
+nor_fit_vals_grouped <- nor_fit_vals |>
+ mutate(num_admins = df + 1) |>
+ select(original_id, lexical_category, num_admins, structure, predictor,
+        age, vocab = production_prop, .fitted) |>
+ left_join(nor_groups |> select(-contains("direction")))
+feather::write_feather(nor_fit_vals_grouped, "data/wordbank-book/nor_fit_vals_grouped.feather")
+```
+
+```{r}
+nor_recovery <- nor_fit_vals_grouped |>
+  filter(str_detect(trajectory, "recovery")) |>
+  group_by(original_id, lexical_category, predictor) |>
+  filter(.fitted == max(.fitted)) |>
+  slice(1) |>
+  ungroup() |>
+  mutate(predictor_val = if_else(predictor == "age", as.double(age), vocab)) |>
+  select(original_id, lexical_category, num_admins, predictor, predictor_val, .fitted)
+
+nor_recovery_summary <- nor_recovery |>
+ group_by(lexical_category, predictor) |>
+ summarise(predictor_val = weighted.mean(predictor_val, num_admins))
+
+ggplot(nor_recovery, aes(x = lexical_category, y = predictor_val, colour = predictor)) +
+  facet_wrap(vars(predictor), scales = "free", strip.position = "left",
+             labeller = as_labeller(c("age" = "Age at overregularization peak",
+                                      "vocab" = "Vocabulary at overregularization peak"))) +
+  ggforce::geom_sina(aes(size = num_admins), alpha = 0.5, maxwidth = 0.6, shape = 16) +
+  stat_summary(geom = "crossbar", fun.data = mean_cl_boot, colour = "grey30", width = 0.7) +
+  .scale_colour_discrete(guide = FALSE) +
+  scale_radius(range = c(0.5, 4), guide = FALSE) +
+  labs(x = "", y = "") +
+  theme(strip.placement = "outside",
+        strip.text = element_text(face = "plain", size = rel(1)),
+        axis.title = element_blank())
+# ggsave("nor_peaks.png", width = 6, height = 3.5)
+
+nor_recovery_lexcat <- nor_recovery |>
+  select(-.fitted) |>
+  pivot_wider(names_from = lexical_category, values_from = predictor_val) |>
+  filter(!is.na(nouns), !is.na(verbs))
+
+cowplot::plot_grid(
+ align = "v",
+ggplot(nor_recovery_lexcat |> filter(predictor == "age"),
+       aes(x = nouns, y = verbs, colour = predictor)) +
+  # facet_wrap(vars(predictor), scales = "free") +
+  coord_equal() +
+  geom_point(aes(size = num_admins), alpha = 0.5, shape = 16,
+             position = position_jitter(width = 0.2, height = 0.2, seed = 2002)) +
+  geom_smooth(method = "lm", colour = "grey30", se = FALSE) +
+  scale_radius(range = c(0.5, 4), guide = FALSE) +
+  .scale_colour_discrete(guide = FALSE) +
+  scale_x_continuous(breaks = seq(20, 32, 4), limits = c(18, 33)) +
+  scale_y_continuous(breaks = seq(20, 32, 4), limits = c(18, 33)) +
+  labs(x = "Age at noun overregularization peak",
+       y = "Age at verb overregularization peak"),
+
+ggplot(nor_recovery_lexcat |> filter(predictor == "vocab"),
+       aes(x = nouns, y = verbs, colour = predictor)) +
+  # facet_wrap(vars(predictor), scales = "free") +
+  coord_equal() +
+  geom_point(aes(size = num_admins), alpha = 0.5, shape = 16) +
+  geom_smooth(method = "lm", colour = "grey30", se = FALSE) +
+  scale_radius(range = c(0.5, 4), guide = FALSE) +
+  scale_colour_manual(values = ptol_pal()(2)[2], guide = FALSE) +
+  scale_x_continuous(breaks = seq(0, 1, 0.25), limits = c(0, 1)) +
+  scale_y_continuous(breaks = seq(0, 1, 0.25), limits = c(0, 1)) +
+  labs(x = "Vocabulary at noun overregularization peak",
+       y = "Vocabulary at verb overregularization peak") +
+  theme(plot.margin = margin(5.5, 5.5, 5.5, 5.5))
+)
+# ggsave("nor_peaks_lexcat.png", width = 7, height = 3.2)
+```

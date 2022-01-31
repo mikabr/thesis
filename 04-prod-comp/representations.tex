@@ -1,0 +1,104 @@
+\begin{figure*}
+
+% begin not productive
+\begin{subfigure}{\textwidth}
+
+  \caption{Target transformation treated as \textbf{not productive}.}
+  \label{fig:example_nonprod}
+  \vspace{1em}
+
+  \footnotesize
+
+  % begin TP
+  \begin{subfigure}[t]{0.4\textwidth}
+  \textbf{Sequential searchtime optimization}
+    \begin{subequations}
+    \begin{empheq}{align*}
+    \substack{\text{count(go)}\\ \text{1 step}}\ &\boxed{\irr \text{go, went}}\\[1em]
+    \substack{\text{count(walk)}\\ \text{2 steps}}\ &\boxed{\reg \text{walk, walked}}\\[1em]
+    \substack{\text{count(run)}\\ \text{3 steps}}\ &\boxed{\irr \text{run, ran}}\\[1em]
+    \substack{\text{count(use)}\\ \text{4 steps}}\ &\boxed{\reg \text{use, used}}\\[1em]
+    \substack{\text{count(play)}\\ \text{5 steps}}\ &\boxed{\reg \text{play, played}}
+    \end{empheq}
+    \end{subequations}
+  \end{subfigure}
+  ~
+  % begin PR
+  \begin{subfigure}[t]{0.55\textwidth}
+  \textbf{Productivity and reuse}
+    \begin{subequations}
+    \begin{empheq}{align*}
+    &\text{inflected forms}\\[0.5em]
+    &\boxed{
+      \substack{\text{count(go)}\\ \boxed{\irr \text{go, went}}}\
+      \substack{\text{count(walk)}\\ \boxed{\reg \text{walk, +/\textipa{d}/}}}\
+      \substack{\text{count(run)}\\ \boxed{\irr \text{run, ran}}}\
+      \substack{\text{count(use)}\\ \boxed{\reg \text{use, +/\textipa{d}/}}}\
+      \substack{\text{count(play)}\\ \boxed{\reg \text{play, +/\textipa{d}/}}}
+    }
+    \\[1.5em]
+    &\text{stems}\\[0.5em]
+    &\boxed{
+      \substack{1\\ \boxed{\irr \text{go}}}\
+      \substack{1\\ \boxed{\reg \text{walk}}}\
+      \substack{1\\ \boxed{\irr \text{run}}}\
+      \substack{1\\ \boxed{\reg \text{use}}}\
+      \substack{1\\ \boxed{\reg \text{play}}}
+    }
+    \end{empheq}
+    \end{subequations}
+  \end{subfigure}
+
+\end{subfigure}
+
+% begin productive
+\begin{subfigure}{\textwidth}
+
+  \caption{Target transformation treated as \textbf{productive}.}
+  \label{fig:example_prod}
+  \vspace{1em}
+
+  \footnotesize
+
+  % begin TP
+  \begin{subfigure}[t]{0.4\textwidth}
+    \textbf{Sequential searchtime optimization}
+    \begin{subequations}
+    \begin{empheq}{align*}
+      \substack{\text{count(go)}\\ \text{1 step}}\ &\boxed{\irr \text{go, went}}\\[1em]
+      \substack{\text{count(run)}\\ \text{2 steps}}\ &\boxed{\irr \text{run, ran}}\\[1em]
+      \substack{\text{count(+/\textipa{d}/)}\\ \text{rule application}}\ &\boxed{\reg \text{*, +/\textipa{d}/}}
+    \end{empheq}
+    \end{subequations}
+  \end{subfigure}
+  ~
+  % begin PR
+  \begin{subfigure}[t]{0.55\textwidth}
+    \textbf{Productivity and reuse}
+    \begin{subequations}
+    \begin{empheq}{align*}
+      &\text{inflected forms}\\[0.5em]
+      &\boxed{
+        \substack{\text{count(go)}\\ \boxed{\irr \text{go, went}}}\
+        \substack{\text{count(run)}\\ \boxed{\irr \text{run, ran}}}\
+        \substack{\text{count(+/\textipa{d}/)}\\ \boxed{\reg \text{*, +/\textipa{d}/}}}
+      }
+      \\[1.5em]
+      &\text{stems}\\[0.5em]
+      &\boxed{
+        \substack{1\\ \boxed{\irr \text{go}}}\
+        \substack{1\\ \boxed{\irr \text{run}}}\
+        \substack{\text{count(walk)}\\ \boxed{\reg \text{walk}}}\
+        \substack{\text{count(use)}\\ \boxed{\reg \text{use}}}\
+        \substack{\text{count(walk)}\\ \boxed{\reg \text{play}}}
+      }
+    \end{empheq}
+    \end{subequations}
+  \end{subfigure}
+
+\end{subfigure}
+
+\caption{Representations of example corpus under two different hypotheses.}
+\label{fig:examples}
+
+\end{figure*}

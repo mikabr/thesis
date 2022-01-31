@@ -1,0 +1,684 @@
+# Similarities and differences among models of productivity {#prod-comp}
+
+## Introduction
+
+One of the central challenges facing a child learning language is when and how
+to form generalizations beyond their exact input. An English-learning child
+needs to infer, for example, that not only do many verbs that they have heard
+form the past tense by adding +/\textipa{d}/ to the stem (*talk* $\rightarrow$
+*talked*, *bark* $\rightarrow$ *barked*) but that novel forms can do so as well
+(*glip* $\rightarrow$ *glipped*). At the same time, the child needs to encode
+that there are exceptions to this pattern and learn their form (*go*
+$\rightarrow$ *went*). The question of how learners come to know which units in
+their language generalize under what conditions in the face of ambiguous,
+exception-riddled evidence can be called the *problem of productivity*
+[@odonnell2015].
+
+While the problem of productivity has been at the heart of the study of language
+for centuries [@bauer2001], there is an increasing consensus that the
+distribution of linguistic units -- that is, its pattern of usage of words,
+stems, affixes, etc. across different contexts -- plays a central role
+[@baayen2009; @bauer2005; @odonnell2015; @yang2016]. In particular, three recent
+theories -- Baayen's hapax-based approach [@baayen1993; @baayen2001;
+@baayen2009], Yang's tolerance principle [@yang2005; @yang2010; @yang2016], and
+O'Donnell's productivity and reuse tradeoff [@odonnell2011; @odonnell2015;
+@odonnell2009] -- are distinguished by their theoretical foundations,
+mathematical precision, empirical coverage, and contact with linguistic theory.
+
+The theories make fundamentally different psychological assumptions in terms of
+whether cognitive computations are performed sequentially or in parallel and
+whether linguistic representations are probabilistic or deterministic. These
+differences represent opposing views about the nature of linguistic computation.
+Thus, a crucial scientific goal is to isolate and study linguistic phenomena in
+which these different approaches lead to differing empirical predictions. Our
+work aims to examine these three leading theories of morphological productivity
+and delineate both the substantive similarities and the crucial differences
+among their assumptions and predictions.
+
+To perform this evaluation, we study variants of these models for which
+inferences are directly comparable in an artificial domain that captures the
+essential features of the problem of productivity. We perform a series of
+analyses that show that the models make systematically differing predictions.
+Specifically, we examine three dimensions for which we predict there to be
+informative differences between these models: number of types, token counts and
+irregular ranks, and rule cost.
+
+In the rest of this paper, we first lay out the problem of productivity as
+formalized in this work. We then delineate the representational and
+distributional assumptions and properties of each model. Next, we describe the
+the three dimensions listed above in terms of the background for their
+importance and the predictions we have about their effects on the models. We
+then specify the designs of our simulations and show their results. Finally, we
+conclude by connecting our model comparisons to future empirical investigations
+that will enable adjudication between the theories.
+
+
+## Setup
+
+### Learning problem
+
+Consider a given morphological system, for example, the much-studied English
+past tense. Verbs are inflected to form the past tense using a variety of
+morphological processes. For the purposes of this work, we refer to any such
+process as a *transformation*, a function that takes a stem and returns its
+inflected form. With respect to a certain transformation (e.g. \textsc{stem}
+$\rightarrow$ \textsc{stem} + /\\textipa{d}/), some verbs are *regular* (their
+inflected form matches the application of the transformation, e.g. *use*
+$\rightarrow$ *used*) and some are *irregular* (their inflected form does not
+match the application of the transformation, e.g. *go* $\rightarrow$ *went,* not
+*go* $\rightarrow$ *goed*).
+
+To isolate the problem of productivity, we presuppose that the learner has
+matched up bases with their inflected forms and isolated the potentially
+productive transformation, i.e. we set aside the problem of rule discovery and
+focus on productivity inference. The task for any learner or model is then to
+determine for each transformation, whether to use it productively, i.e. whether
+to apply it to novel stems. For example, consider a toy corpus of the English
+past tense:
+
+```{=tex}
+\vspace{1em}
+\begin{tabular}{llll}
+\hline
+\textbf{verb} & \textbf{stem} & \textbf{transformation} & \textbf{count} \\
+\hline
+% go & \textsc{stem} $\rightarrow$ went & $c_\text{go}$ \\
+% walk & \textsc{stem} $\rightarrow$ \textsc{stem} + /d/ & $c_\text{walk}$ \\
+% run & \textsc{stem} $\rightarrow$ ran & $c_\text{run}$ \\
+% use & \textsc{stem} $\rightarrow$ \textsc{stem} + /d/ & $c_\text{use}$ \\
+% bark & \textsc{stem} $\rightarrow$ \textsc{stem} + /d/ & $c_\text{bark}$ \\
+go & /\textipa{gow}/ & \textsc{stem} $\rightarrow$ \textipa{wEnt} & $c_\text{go}$ \\
+walk & /\textipa{wOk}/ & \textsc{stem} $\rightarrow$ \textsc{stem} + /\textipa{d}/ & $c_\text{walk}$ \\
+run & /\textipa{\*r2n}/ & \textsc{stem} $\rightarrow$ \textipa{\*raen} & $c_\text{run}$ \\
+use & /\textipa{juz}/ & \textsc{stem} $\rightarrow$ \textsc{stem} + /\textipa{d}/ & $c_\text{use}$ \\
+play & /\textipa{plej}/ & \textsc{stem} $\rightarrow$ \textsc{stem} + /\textipa{d}/ & $c_\text{play}$ \\
+\hline
+\end{tabular}
+\vspace{1em}
+```
+
+Faced with this input, the learner would need to determine whether to treat the
+transformation \textsc{stem} $\rightarrow$ \textsc{stem} + /\\textipa{d}/ as
+productive and memorize the forms *go/went* and *run/ran*, or to not treat it as
+productive and memorize all five forms.
+
+Inferences about productivity could in principle take into account many
+distributional properties of the linguistic input. Does it matter how many
+regular and irregular verbs there are? Does it matter how many times each verb
+occurs in the corpus? Does it matter if irregulars tend to be more frequent than
+regulars, or *vice versa*? Theories of productivity have proposed various
+distributional information sources as the determinants of productivity,
+including type frequencies [@bybee1995], token frequencies, single occurrence
+frequencies [@baayen1993; @baayen2001; @baayen2009], number of exceptions
+[@yang2005; @yang2010; @yang2016], and functions of one or more of the above
+[@aronoff1976; @barnwell2010; @taatgen2002; @odonnell2015].
+
+### Measuring productivity
+
+We define the productivity of a transformation under some model as the
+probability of using that transformation productively, i.e. applying it to a
+novel stem. In this view, a model can be thought of as a function that takes a
+corpus as input and returns a probability distribution over transformations
+given a novel stem. For each model, we define its productivity measure
+$\mathcal{P}^*$ as the probability it assigns to using a target transformation
+$\tau$ given a novel stem $s^*$ and a corpus $D$:
+$$\mathcal{P}^* = P(\tau\, |\, s^*,D)$$
+
+We will be defining this quantity for each model under consideration and
+computing it under various regimes in our simulations. Any time we refer to the
+"productivity" of a model, we are referring to the corresponding
+$\mathcal{P}^*$.
+
+## Models
+
+In this section, we give an overview of the assumptions of each model and
+illustrate its inferences using the toy corpus shown in
+Figure \ref{fig:examples}. We focus on translating the underlying machinery of
+each framework to a common language, aiming to make clearer the similarities and
+differences among the models and pinpoint the ways in which their predictions
+differ. For each model, we define its productivity measure $\mathcal{P}^*$.
+
+Throughout, we use the notation of the input to a model being a corpus $D$ of
+triplets stem, transformation, count: $(s_i,t_i,c_i)$, where there are $n$ stems
+(in the set of stems $S = E \cup R$) of which $k$ are irregular (in $E$) and
+$n-e$ are regular (in $R$). Additionally, we designate the counts of the
+irregulars as $c^E_1, c^E_2, \ldots, c^E_e$ and the counts of the regulars as
+$c^R_1, c^R_2, \ldots, c^R_{n-e}$.
+
+\input{04-prod-comp/representations}
+
+### Hapax-based statistical estimators
+
+By far the most thoroughly studied and widely used measures of productivity are
+Baayen's P\*\*, P\* and P [@baayen2001]. Because productive affixes frequently
+give rise to new words, their word frequency distributions typically contain a
+large number of low frequency forms. This observation suggests that a reasonable
+estimate of the productivity of an affix might be based on the number or
+proportion of low-frequency words associated with the affix. Baayen's statistics
+are based on this idea. In particular, all three quantities estimate the
+probability of unobserved (i.e., novel) words using the proportion of word types
+which appear only once in a corpus (hapaxes). This intuition can be rigorously
+justified under several different sets of mathematical assumptions
+[@baayen2001]. Baayen's P\* (*expanding productivity*) corresponds to a direct
+estimator of our $\mathcal{P}^*$.
+
+In particular, for a corpus of $N$ words, let $|H$\| be the number of words in
+the corpus with frequency 1 (hapaxes): $H = \{s \in S\ |\ c_s = 1\}$; and let
+$|H_R|$ be the number of hapaxes in the corpus that use the target
+transformation: $H_R = \{s \in R\ |\ c_s = 1\}$. P\* is then the proportion of
+all hapaxes in the corpus that use the target transformation:
+
+$$ \mathcal{P}^*_\texttt{HAPAX} = \frac{|H_R|}{|H|}$$
+
+### Tolerance principle
+
+In a series of studies, Yang has developed a theory of productivity known as the
+tolerance principle [@yang2005; @yang2010; @yang2016]. Below we describe first
+the machinery underlying the tolerance principle, the elsewhere condition serial
+search model, and then its analytic form. Our model comparison set includes both
+versions.
+
+#### Elsewhere condition serial search
+
+The elsewhere condition serial search (`ECSS`) framework posits that inflecting
+a stem is based on serial search through a frequency-ranked list of forms. If
+the stem isn't a found in the list, an "elsewhere condition" indicates how to
+inflect it. For a given transformation, productivity inferences arise from
+comparing two candidate lists, one in which all forms are listed (i.e. stored)
+vs. one in which only the irregulars are listed and the regulars fall under the
+elsewhere condition. These two hypotheses are compared based on their expected
+processing times. For the example corpus, Figure \ref{fig:example_nonprod} shows
+the full listing (no rule) representation, where all stems are stored in
+descending order of frequency, so the most frequent stem (*go*) requires one
+time step, the second most frequent stem (*walk*) requires two time steps, and
+so on. Figure \ref{fig:example_prod} shows the rule representation, where the
+regulars are pulled out of this list, so they all require a fixed number of
+steps (in this case, 3).
+
+More concretely, for our set $S$ of $n$ stem types, let
+$T = t_1, t_2, \ldots, t_n$ be the processing time of each stem. The probability
+(normalized token frequency) of a stem $s$ is given by $P(s)$, its frequency
+rank among all stems is given by $r_s$, and for exceptions, their frequency rank
+among exceptions is given by $r_e$.
+
+The no rule hypothesis corresponds to the search time of each stem being equal
+to its rank among all stems. So the expected processing time $T_\text{NR}$
+averaged over all stems is given by:
+
+$$ \mathbb{E}[T_\text{NR}] = \sum_{s \in S} P(s)t_s = \sum_{s \in S} P(s)r_s $$
+
+For the rule hypothesis, the processing times of exceptions are equal to their
+ranks within the list of exceptions $t_s = r_e$, while each of the regulars
+requires the same number of processing time steps, $k$, plus the fixed cost
+$\omega$ of applying the rule $t_s = e + \omega$. So the expected processing
+time $T_\text{R}$ is given by:
+
+$$ \mathbb{E}[T_\text{R}] = \sum_{s \in S} P(s)t_s = \sum_{s \in S} P(s) (\delta_e r_e + (1 - \delta_e)(k + \omega)) $$
+
+Where $\delta_e$ is an indicator variable that is equal to one if $s$ is an
+exception.
+
+Inference of productivity then comes from comparing the two expected running
+times $\mathbb{E}[T_\text{R}]$ and $\mathbb{E}[T_\text{NR}]$.
+
+There are multiple possibilities for how this hypothesis selection might be used
+to determine $\mathcal{P}^*$. Given a novel stem, the model could categorically
+apply the regular transformation if and only if the rule hypothesis is selected:
+
+$$
+\begin{aligned}
+\mathcal{P}^*_{\texttt{ECSS}}
+&=
+  \begin{cases}
+    1 & \mathbb{E}[T_\text{R}] < \mathbb{E}[T_\text{NR}] \\
+    0 & \text{otherwise}
+  \end{cases}
+\end{aligned}
+$$
+
+Or it could always apply the regular transformation under the rule hypothesis
+and select a transformation uniformly at random under the no rule hypothesis:
+
+$$
+\begin{aligned}
+\mathcal{P}^*_{\texttt{ECSS}}
+&=
+  \begin{cases}
+    1 & \mathbb{E}[T_\text{R}] < \mathbb{E}[T_\text{NR}] \\
+    \frac{1}{k+1} & \text{otherwise}
+  \end{cases}\\[2ex]
+\end{aligned}
+$$
+
+Here we use the latter $\mathcal{P}^*$ for `ECSS`, in line with [@schuler2016].
+
+#### Analytic tolerance principle {#tp}
+
+Yang makes a number of distributional assumptions that allow for the derivation
+of a generally-stated evaluation metric that does not depend on token
+frequencies. This simplification requires assuming that:
+
+(1) Token frequencies follow the Zipfian distribution (for a stem of rank $r_s$,
+    $P(s)=\frac{1}{r_sH_n}$ where $H_n = \sum_{i=1}^n \frac{1}{i}$.
+
+(2) Irregulars are a random subset of all stems (each stem's probability of
+    being irregular is $k/n$).
+
+(3) A random sample from a Zipfian distribution is also Zipfian, so the token
+    frequencies of the irregulars also follow the Zipfian distribution. (for a
+    stem of rank $r_e$ among exceptions, $P(s)=\frac{1}{r_eH_e}$.
+
+(4) There is no cost associated with rule application ($\omega=0$).
+
+With these assumptions about the input, the model yields the threshold that if
+$k$ types are irregular out of $n$ total, the transformation will be considered
+productive if and only if $k \leq \frac{n}{\log{n}}$. As such, the threshold
+depends only on the type frequencies of regulars and irregulars and does not
+interact in any way with their token frequencies.
+
+Under the analytic tolerance principle threshold `TP`, if there is a productive
+transformation, it will always be used for novel stems. It is less clear how
+this model ought to treat novel stems if there is not a productive
+transformation. As above for `ECSS`, we use a fallback to picking a
+transformation uniformly at random:
+
+$$
+\mathcal{P}^*_{\texttt{TP}} =
+  \begin{cases}
+    1 & e \leq \frac{k}{\log{k}} \\
+    \frac{1}{e+1} & \text{otherwise}
+  \end{cases}
+$$
+
+### Productivity and reuse tradeoff
+
+Another theory of productivity is O'Donnell's productivity and reuse tradeoff
+[@odonnell2011; @odonnell2015; @odonnell2009]. This approach is based on the
+idea that the productivity of linguistic units can be determined by optimizing a
+probabilistic trade-off between a pressure to store fewer, more reusable
+primitive units and a pressure to account for each linguistic expression in as
+few computational steps as possible. These pressures are quantified in terms of
+probability and competition is resolved in parallel. To capture this tradeoff,
+the productivity and reuse framework makes the following two assumptions.
+
+First, it assumes that the probability of an expression is the product of the
+probabilities associated with the use of each lexical item in the derivation of
+that expression expression. Since probabilities are numbers between $0$ and $1$,
+a product of probabilities declines rapidly (geometrically quickly) as the
+number of probabilities in the product increases. The more complex a derivation
+is, therefore, the smaller its probability will be, on average. Of course, the
+exact probability will depend on the probabilities of individual lexical items
+in a derivation. If all of the lexical items are very probable, then the
+expression will also be more probable. Nevertheless, more complex derivations
+will tend to have lower probabilities regardless of the specific lexical items
+within them. This assumption creates a bias towards derivations which use fewer
+lexical items per expression, in the extreme case perhaps treating entire
+expressions as single lexical units.
+
+Second, it assumes that the probability of a lexical item in some context in a
+derivation is proportional to the number of times that lexical item was used in
+the same context in the derivation of other expressions. This implements a
+rich-get-richer scheme: The probability that a lexical item be used will
+increase as it is used more. For a given corpus, the fewer items in the lexicon,
+the more often (on average) each item will have to be used across derivations
+and, thus, the more probable each item will be. Relating the probability of
+lexical items to their frequency of use straightforwardly implements the bias
+towards smaller lexicons with smaller, more reusable lexical items.
+
+These assumptions lead to a tradeoff. One one hand, the learner could avoid
+complex derivation by storing a large number of relatively big lexical items.
+While this would minimize the complexity of derivations, each lexical item would
+be less reusable across expressions, and thus less probable. On the other hand,
+the learner could favor a small number of relatively small lexical items. These
+lexical items would be highly reusable across contexts and thus highly probable.
+However, many of them would be required to analyze each expression. The best
+lexicon is the one which optimizes these competing constraints.
+
+As a consequence of this evaluation metric, productivity is determined by a
+complex interplay between type and token frequencies. More regular types would
+generally lead to the regular transformation being more likely to be productive
+(more forms can be decomposed, meaning more savings from having a table for the
+regular transformation). However, this is not necessarily the case, and
+interacts with the relative frequencies of the regular and irregular forms. High
+token frequency regular forms can actually inhibit the drive toward
+productivity, since a high probability of use creates a higher computational
+cost. The biggest driver of productivity is a high number of low frequency
+regular forms, corresponding to the intuition that the best evidence for the
+productivity of a transformation is seeing it used productively, i.e. applied to
+novel forms.
+
+In the general case, a full model based on the productivity and reuse tradeoff
+would consider every combination of storage and computation for each form. This
+results in a huge hypothesis space and complex inference problem that can be
+solved by a stochastic search procedure. Here we take a different approach by
+applying the simplifying assumptions described above to the underlying
+representations used by the framework. For a given corpus, all forms are
+initially treated as computed and are iteratively stored until further storage
+does not increase the model's posterior score. This corresponds to a search
+through the posterior space that allows for possibilities where some (high
+frequency) regulars are stored and/or irregulars computed. The model's
+parameters are set to correspond to uninformative priors over storage states.
+
+The productivity metric for this model is then the probability of using the
+target transformation given a novel stem, conditioned on the storage state found
+by the procedure described above.
+
+## Predictions
+
+We lay out three key dimension for which we predict the models that we are
+comparing to have informative convergences and divergences in their behaviors.
+In our simulations, we will quantitatively evaluate these predictions.
+
+### Number of types
+
+__Background__. How do productivity inferences about a specific transformation
+depend on the overall number of types to which that transformation can apply?
+Are transformations with smaller or larger domains able to tolerate more
+exceptions while being productive? For the tolerance principle, the productivity
+threshold, being $\frac{n}{\log(n)}$, grows sublinearly as function of $n$, and
+so "'[S]maller' rules... can tolerate a relatively higher number of exceptions.
+Large rules are more vulnerable" [@yang2016, p. 66]. According to Yang, this
+property is "the most surprising, and in my view the most important,
+quantitative aspect of the Tolerance Principle" [@yang2016, p. 66].
+
+For both productivity and reuse and hapax-conditioned productivity, there is no
+straightforwardly necessary relationship between productivity and number of
+types, because their productivity inferences depend not just on the overall
+number of types but on further properties of the type and token distribution of
+regulars and irregulars. But there is a likely relationship such that as you
+increase the number of types, under reasonable assumptions about word
+frequencies, you are more likely to get more regulars that drive towards
+productivity (i.e. more regular hapaxes for HC, more non-stored regulars for
+PR).
+
+__Predictions__. As such, we expect tolerance to number of irregulars as a
+function of number of types to _decrease_ for `TP` and to _increase_ for `PR`
+and `HC`, though possibly in different ways depending on properties of the
+corpus setup. For `ECSS`, to the extent that the more general elsewhere
+condition serial search model is well approximated by the assumptions of the
+analytic tolerance principle, it should exhibit the same behavior.
+
+### Token counts and irregular ranks
+
+__Background__. A key feature of the tolerance principle is its simplicity --
+only the numbers of regular and irregular types need to be taken into account,
+rather than more complex corpus statistics. However, this property comes about
+from making a number of assumptions that allow the full `ECSS` model to be
+simplified into the `TP` analytic form (as described in Section\ \ref{tp}). For
+the `ECSS` measure of productivity, token counts and irregular ranks matter --
+they translate into probabilities that figure into the calculation of expected
+processing time. But for `TP`, it is assumed that irregulars are a random subset
+of all types and that the token count distributions for all types and for
+irregulars specifically are both Zipfian. Yang posits that the `TP` analytic
+form has the necessary explanatory power without necessitating the `ECSS`
+calculation and without dependence on token counts. He also argues that a
+"[e]ven if all the exceptions are in the top half of the $N$ items, the
+threshold... will hardly move" [@yang2016, p. 65].
+
+For both productivity and reuse and hapax-conditioned productivity, token counts
+and irregular ranks are crucial. For `HC` they determine how many regulars are
+in the tail of the word frequency distribution such that they have a count of 1;
+for `PR` they similarly influence how many regulars have low counts and are thus
+provide pressure against storage of the regular transformation.
+
+The dependence on token counts and irregular ranks is particularly important to
+evaluate given that the relation between frequency and irregularity is an
+empirical question. Yang notes that while "it has often been observed that
+exceptions tend to clustered the [sic] high-frequency region of words... the
+concentration of English irregular verbs at the very top appears to be an
+outlier in a wide range of empirical cases" [@yang2016, p. 65]. In recent work,
+@wu2019 confirmed statistically in a sample of 28 languages the long-standing
+observation that higher frequency forms tend to be irregular and that irregular
+forms tend to be higher frequency.
+
+__Predictions__. For `TP`, only type counts matter and token counts should be
+irrelevant. For `ECSS`, in cases where the derivational assumptions of `TP` are
+satisfied (i.e. irregulars are random), its behavior should be similar to that
+of `TP`, but when they are altered its behavior may diverge. In contrast, for
+`PR` and `HC`, token counts and irregulars ranks should both play a role, such
+that corpus setups where there are more low frequency regulars should be more
+conducive to productivity.
+
+### Rule cost
+
+__Background__. The focus of the theory of productivity and reuse is on an
+optimization tradeoff between storage and computation, in that there is both a
+cost associated with storing items (fewer and more reusable stored units is
+better) and a cost associated with applying transformations (fewer computation
+steps is better). `ECSS` also implements an optimization (over expected
+processing time), but there is no cost associated with applying a
+transformation. However, the underlying machinery behind `ECSS` includes not
+just this "rule selection" process but also a "rule application" process. Rule
+application "is sensitive to the frequency of the morphological constituent"
+[@yang2016, p. 55], much like `PR` is sensitive to item frequency. The question
+becomes, how does the behavior of `ECSS` change when there is a non-zero cost
+associated with the application of a transformation? How does that relate to the
+behavior of `PR`?
+
+Hapax-conditioned productivity is a statistical estimator, rather than a
+cognitive model.  As such, it doesn’t include a notion of storage or computation
+and is omitted from this analysis.
+
+__Predictions__. We predict that the addition of rule cost will change behavior
+of `ECSS`, such that it behaves more similarly to `PR` when the rule cost is
+higher.
+
+
+## Analyses
+
+The goal of our analyses is to investigate how inferences about productivity are
+determined by various distributional properties of the input, and to
+quantitatively evaluate the predictions described above. To perform this
+evaluation, we (1) construct a space of parametrically-varying input corpora,
+(2) define two simulation regimes using those corpora, and (3) conduct analyses
+using these simulations to investigate the role of each of the three factors
+described above.
+
+### Corpora
+
+We consider corpora with one potentially productive target transformation that
+applies to a subset of stems. The input to a model is a corpus that consists of
+a set of triplets <`stem`, `transformation`, `count`>, which gives the count of
+the number of times the form given by the combination of that stem and
+transformation appears in the corpus.
+
+For all corpora we use a Zipfian distribution of token frequencies, such that
+for a stem $s$ with frequency rank $r_s$:
+
+$$ P(s) = \frac{1}{r_s H_n}, H_n = \sum_{i = 1}^n \frac{1}{i} $$
+
+These artificially generated corpora are determined by:
+
+-   Number of types ($n$).
+
+-   Number of irregular types (each irregular form is assigned to a unique
+    transformation, and all other forms are assigned to the target
+    transformation, so $k$ irregulars corresponds to $k + 1$ transformations).
+
+-   Placement of irregulars among all types in frequency rank. Irregular ranks
+    are either a random sample of all ranks or are determined such that the gaps
+    between them are given by the Zipfian distribution. As an example, a corpus
+    with $n=10$ and $k=4$ would have ranks (from first to last) given by
+    `IrIrrIrrrIrrrr` (where `I` indicates an irregular and `r` indicates a
+    regular).
+
+```{r}
+source("04-prod-comp/analysis_params.R")
+```
+
+### Simulations
+
+Using this space of corpus parametrizations, we run a set of simulations that
+examine the models' behavior under various regimes. We use two types of
+simulations, one for computing for productivity values and one for finding
+productivity thresholds.
+
+#### Productivity values
+
+We generate corpora where $n$ is fixed to `r fixed_n`, and $k$ ranges from 0 to
+`r max_prop`$\cdot n$. For each irregular ranking method, we directly compute
+the $\mathcal{P}^*$ of each model and examine its value as a function of number
+of $k$.
+
+#### Productivity thresholds
+
+We define the target transformation to be productive under a given model if its
+$\mathcal{P}^*>0.5$. For a given $n$, we define a model's productivity threshold
+as the greatest number of irregular types such that the target transformation is
+productive. We examine how these productivity thresholds change a function of
+$n$ under each irregular ranking method.
+
+The total number of types ranges between `r threshold_min_n` and
+`r threshold_max_n`. For each value of $n$, the possible number of irregulars
+ranges from 0 to `r max_prop`$\cdot n$. For a given value of $n$, we find the
+productivity threshold for each model by finding the number of irregulars $k$
+such that the model gives productive for $k$ and non-productive for $k+1$. For
+`TP` and `ECSS` this consists of checking every number of irregulars from 0 up
+until the model gives non-productive; for `PR` this consists of doing binary
+search over the range of possible numbers of irregulars.
+
+## Results
+
+### Analysis 1: Number of types
+
+Across all different simulations, there is a striking difference in the shapes
+of productivity threshold curves between `PR` and `TP`, as shown in
+Figure \ref{fig:thresholds-ranks}. As the overall number of types increases,
+`PR` can tolerate an *increasing* proportion of irregulars, while `TP` can
+tolerate a *decreasing* proportion of irregulars. `HC` tolerates a roughly
+constant proportion of irregulars. An immediate consequence of this observation
+is that under `TP`, it is challenging to account for morphological paradigms
+with a generalization that applies to a minority of types (or even to a majority
+less than the `TP` threshold), but is nevertheless productive. This is famously
+the case in the German plural, where there is a transformation that applies to a
+tiny minority of nouns, but is used productively. One way to attempt to resolve
+this issue is to break down types into subsets that only certain transformations
+can apply to, leaving a smaller set over which to determine the productivity of
+the minority generalization [@yang2016].
+
+```{r thresholds-ranks, fig.cap="For each model, curves show the maximum proportion of irregulars for which the regular transformation is inferred to be productive, as a function of total number of types. Panels show different irregular ranking methods."}
+knitr::include_graphics("04-prod-comp/figures/thresholds-ranks-1.pdf")
+# thresholds_plot |>
+#   filter(group != "ECSS" | param == 0) |>
+#   plot_thresholds()
+```
+
+```{r fixed, fig.cap="For each model, curves show the productivity of the regular transformation as a function of number of irregulars out of a fixed number of types. Panels show different irregular ranking methods."}
+knitr::include_graphics("04-prod-comp/figures/fixed-1.pdf")
+# fixed_data_plot |>
+#   filter(num_exceptions <= 0.6 * num_stems) |>
+#   plot_fixed_data()
+```
+
+### Analysis 2: Token frequencies and irregular ranks
+
+__Productivity thresholds__. Figure \ref{fig:thresholds-ranks} also shows the
+productivity threshold curves under various exception ranking regimes, with
+irregulars ranked uniformly in the left panel and irregulars more frequent in
+the right panel.
+
+The tolerance curve for `PR` is sensitive to the positions of irregulars, in
+that `PR` can tolerate fewer irregulars when they are more frequent than when
+they are uniform. However this difference is small, and may be an artifact of
+our particular simulation setup.
+
+This analysis reveals a difference in behavior between `TP` and `ECSS`. When
+irregulars are ranked uniformly, `ECSS` approximates `TP` closely. As irregulars
+are skewed more towards the high end of the frequency distribution, however,
+`ECSS` systematically deviates from `TP`, and if irregulars are sufficiently
+highly frequent, the productive representation of the data is strictly faster in
+processing time that the full listing representation, so the transformation is
+*always* treated as productive.
+
+__Productivity values__. Figure \ref{fig:fixed} shows the productivity
+values under various ranking regimes, with irregulars ranked uniformly in the
+left panel and irregulars more frequent in the right panel.
+
+Under both irregular ranking methods, the curves for `PR` and `HC` are broadly
+similar, with a gradual decrease in productivity as the number of irregulars
+increases. There is a larger gap between the two when irregulars are uniform as
+opposed to when they are more frequent. This is consistent with the idea that
+for both `PR` and `HC`, productivity is driven primarily by a large number of
+low-frequency regulars (directly as hapaxes for `HC`, indirectly as pressure for
+a reusable unit for `PR`). Their productivity trajectories are thus broadly
+similar, but differ less when the irregulars are more frequent, in that the
+increasing irregulars don't affect the tail of regulars as much.
+
+(ref:demotraj-cap) For `TP` and each rule application cost of `ECSS`, curves
+show the maximum proportion of irregulars for which the regular transformation
+is inferred to be productive, as a function of total number of types.
+```{r thresholds-ecss-tp, out.width="50%", fig.cap="(ref:demotraj-cap)"}
+knitr::include_graphics("04-prod-comp/figures/thresholds-ecss-tp-1.pdf")
+# thresholds_plot |>
+#   filter(group %in% c("TP", "ECSS"), str_detect(dist_name, "uniform")) |>
+#   plot_thresholds(0.4)
+```
+
+### Analysis 3: Rule cost
+
+__Productivity thresholds__. In Figure \ref{fig:thresholds-ecss-tp}, we show the
+productivity threshold curves for `TP` and for `ECSS` with rule costs between 0
+and `r max(threshold_rule_costs)`. As the rule cost increases, the behavior of
+`ECSS` becomes less similar to `TP` and more similar to `PR`, with an increasing
+proportion of exceptions tolerated as a function of overall number of types.
+`ECSS` without a rule cost, along with `TP`, encodes a pressure *for*
+productivity, in that combining regulars into an elsewhere condition can reduce
+their expected search time. The addition of a rule cost adds a pressure
+*against* productivity, in that the addition of the elsewhere condition incurs a
+separate processing cost. As such the `ECSS` model can be thought of as encoding
+a trade-off between storage and computation similar to that of `PR`. However,
+the threshold curves for `ECSS` appear to asymptote at a much lower proportion
+of irregulars than for `PR`.
+
+__Productivity values__. Referring back to the productivity values in Figure
+\ref{fig:fixed}, we again see a convergence between the behavior of `TP` and
+`ECSS` when irregulars are ranked uniformly and for a rule cost of 0, and a
+divergence in other settings. Further, we see why in the threshold analysis,
+`ECSS` is always productive when irregulars are frequent, as that is equivalent
+to $\mathcal{P}^*_{\texttt{ECSS-sig}}>0.5$. However, even when the irregulars
+are more frequent, the productivity trajectories of `ECSS` can be differentiated
+by rule cost -- the costlier it is to apply the rule, the less productive `ECSS`
+tends to be. `ECSS` with a non-zero rule cost again more closely resembles `PR`
+than `TP`, presumably because, as discussed above, it encodes a version of
+storage-computation tradeoff.
+
+## Conclusion {#prod-comp-conclusion}
+
+We compared and contrasted the assumptions and behaviors of three leading models
+of morphological productivity -- the tolerance principle, the theory of
+productivity and reuse, and hapax-based estimation. To do this, we generated a
+set of parametrically-varying corpora and examined how properties of this
+inputs affected the patterns in productivity inferences made by each model.
+
+First, we found a fundamental difference between productivity and reuse on one
+hand and the tolerance principle and the more general elsewhere condition
+serial search on the other hand. As the overall number of types that a
+morphological transformation could apply to increases, `PR` can tolerate an
+_increasing_ proportion of irregular types, while `TP` and `ECSS` can tolerate
+a _decreasing_ proportion of irregular types. Commonly studied morphological
+systems, for example the English past tense, therefore can't distinguish between
+the predictions of these models, because they have a large number of types and
+a very low proportion of irregulars.
+
+Second, we isolated several ways in which the analytical form of the tolerance
+principle systematically differs from the `ECSS` model from which it's derived.
+The derivation of the tolerance principle crucially involves the assumption
+that irregular types a random sample of all types, and for inputs where this
+assumption doesn't hold (i.e. irregulars are skewed towards being higher
+frequency), `ECSS` becomes increasingly prone to productivity.
+
+Additionally, elsewhere condition serial search lends itself to the addition of
+a rule cost component, reflecting a tradeoff between storage and computation
+rather than an optimization based solely on storage cost. An increasing rule
+cost drastically changes the behavior of `ECSS`, becoming more similar to `PR`.
+
+An important note about this work is in all of these analyses, the exact values
+returned by the models should not be treated as quantitative predictions -- the
+input corpora are simulated rather than empirical and the parameter values are
+set uninformatively rather than tuned to specific data. Rather, the shapes of
+models' predictions within a simulation paradigm gives signatures of their
+behavior that can be compared with one another.
+
+Future work could involve finding morphological systems or experimental
+paradigms that would enable evaluation of the model differences we isolated
+here.

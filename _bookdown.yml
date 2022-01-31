@@ -1,0 +1,7 @@
+book_filename: "thesis-mikabr"
+output_dir: "_thesis"
+delete_merged_file: true
+before_chapter_script: "_setup.R"
+language:
+  ui:
+    chapter_name: "Chapter "

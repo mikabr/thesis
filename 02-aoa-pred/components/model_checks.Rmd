@@ -1,0 +1,111 @@
+```{r polysemy}
+# polysemously split uni_lemmas
+poly <- uni_model_data |>
+  ungroup() |>
+  distinct(language, uni_lemma) |>
+  filter(str_detect(uni_lemma, "\\(.*\\)")) |>
+  mutate(homonym = str_replace(uni_lemma, "(.*) \\(.*\\)", "\\1")) |>
+  group_by(language, homonym) |>
+  filter(n() > 1) |>
+  distinct(language, homonym) |>
+  ungroup() |>
+  count(language)
+```
+
+```{r overlap}
+# how much do uni_lemmas overlap across languages
+
+overlap <- uni_model_data |>
+  ungroup() |>
+  distinct(language, uni_lemma) |>
+  group_by(uni_lemma) |>
+  summarise(n_langs = n()) |>
+  group_by(n_langs) |>
+  summarise(n = n()) |>
+  mutate(prop = n / sum(n))
+
+in_range <- function(min_langs, max_langs) {
+  round(sum(
+    filter(overlap, n_langs >= min_langs, n_langs <= max_langs)$prop * 100
+  ))
+}
+```
+
+```{r correlations}
+# pairwise correlations among predictors
+
+predictor_cors <- uni_model_data |>
+  ungroup() |>
+  select(language, uni_lemma, !!predictors) |>
+  distinct() |>
+  gather(predictor, value, !!predictors) |>
+  group_by(language) |>
+  nest() |>
+  mutate(cors = map(data, ~.x |>
+                    widyr::pairwise_cor(predictor, uni_lemma, value,
+                                        upper = TRUE))) |>
+  select(-data) |>
+  unnest(cors) |>
+  rename(predictor1 = item1, predictor2 = item2)
+
+mean_predictor_cors <- predictor_cors |>
+  group_by(predictor1, predictor2) |>
+  summarise(mean_cor = mean(correlation)) |>
+  arrange(desc(abs(mean_cor)))
+
+mean_pair_cor <- function(p1, p2) {
+  pair_cor <- mean_predictor_cors |>
+    filter(predictor1 == p1 & predictor2 == p2) |>
+    pull(mean_cor) |>
+    round(2)
+  glue("$r = {pair_cor}$")
+}
+```
+
+```{r collinearity}
+# multicollinearity check
+
+predictor_data <- uni_model_data |>
+  ungroup() |>
+  select(language, !!predictors) |>
+  distinct() |>
+  nest(data = -language)
+
+predictor_vif <- function(lang_data, predictor) {
+  others <- paste(predictors[predictors != predictor], collapse = ' + ')
+  predictor_model <- glue("{predictor} ~ {others}") |>
+    as.formula() |>
+    lm(data = lang_data)
+  1 / (1 - summary(predictor_model)$r.squared)
+}
+
+vifs <- predictor_data |>
+  mutate(vifs = map(data, function(lang_data) {
+    tibble(predictor = predictors,
+           vif = map_dbl(predictors,
+                         ~predictor_vif(lang_data, .x)))
+  })) |>
+  select(-data) |>
+  unnest(vifs)
+```
+
+```{r lengths}
+lengths <- uni_joined |>
+  select(language, uni_lemma, num_phons) |>
+  distinct() |>
+  group_by(language) |>
+  summarise(mean = mean(num_phons),
+            median = median(num_phons))
+```
+
+```{r missing}
+missing <- uni_joined |>
+  select(language, measure, uni_lemma, !!predictors) |>
+  distinct() |>
+  gather(predictor, value, !!predictors) |>
+  group_by(language, measure, predictor) |>
+  summarise(missing = sum(is.na(value)) / n()) |>
+  group_by(predictor) |>
+  summarise(min_missing = min(missing),
+            max_missing = max(missing))
+```

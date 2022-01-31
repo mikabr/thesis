@@ -1,0 +1,10 @@
+bookdown::pdf_book:
+  template: pandoc-thesis.tex
+  includes:
+    in_header:
+      - preamble.tex
+      - 04-prod-comp/header.tex
+  latex_engine: xelatex
+  citation_package: natbib
+  keep_tex: yes
+  toc_depth: 2
